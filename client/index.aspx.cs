@@ -11,7 +11,24 @@ namespace client
     {
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["UserEmail"] == null)
+            {
+                Response.Redirect("login.aspx");
+            }
+            else
+            {
+                lblUserEmail.Text = Session["UserEmail"].ToString();
+            }
+        }
 
+        protected void btnLogout_Click(object sender, EventArgs e)
+        {
+            // Clear the session
+            Session.Abandon();
+            Session.Clear();
+
+            // Redirect to login page
+            Response.Redirect("login.aspx");
         }
     }
 }

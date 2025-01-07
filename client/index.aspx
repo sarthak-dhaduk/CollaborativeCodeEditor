@@ -1,6 +1,8 @@
-﻿<!DOCTYPE html>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="index.aspx.cs" Inherits="client.index" %>
+
+<!DOCTYPE html>
 <html lang="en">
-<head>
+<head runat="server">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Collaborative Code Editor</title>
@@ -36,9 +38,28 @@
         gap: 10px;
     }
 </style>
+
 </head>
 <body>
-    <h1>Collaborative Code Editor</h1>
+        <form id="form1" runat="server">
+    <div>
+        <h1>Welcome to the Application</h1>
+        <p>
+            Logged in as: <asp:Label ID="lblUserEmail" runat="server"></asp:Label>
+        </p>
+        <!-- Logout button -->
+        <asp:Button ID="btnLogout" runat="server" Text="Logout" OnClick="btnLogout_Click" />
+    </div>
+</form>
+    <br />
+    <br />
+    <div id="joinedUsers" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; background-color: #f1f1f1;">
+    <strong>Users in Room:</strong>
+    <div id="usersList" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+</div>
+
+    <br />
+    <br />
     <div id="controls">
     <button id="createRoom">Create Room</button>
 <input id="roomId" placeholder="Enter Room ID" />
