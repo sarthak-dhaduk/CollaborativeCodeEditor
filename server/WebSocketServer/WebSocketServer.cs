@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
@@ -12,6 +13,7 @@ namespace CollaborativeCodeEditor
     {
         private readonly HttpListener _listener;
         private readonly ConcurrentDictionary<string, ConcurrentBag<WebSocket>> _rooms = new ConcurrentDictionary<string, ConcurrentBag<WebSocket>>();
+        private readonly ConcurrentDictionary<string, HashSet<string>> _roomUsers = new ConcurrentDictionary<string, HashSet<string>>();
 
         public WebSocketServer(string uriPrefix)
         {
@@ -65,21 +67,33 @@ namespace CollaborativeCodeEditor
 
                         if (message.StartsWith("JOIN:"))
                         {
-                            currentRoom = message.Split(':')[1];
+                            currentRoom = message.Split(':')[1].Trim();
 
-                            // Add the WebSocket to the room
+                            // Add WebSocket to the room
                             if (!_rooms.ContainsKey(currentRoom))
                                 _rooms[currentRoom] = new ConcurrentBag<WebSocket>();
 
                             _rooms[currentRoom].Add(webSocket);
+                            _roomUsers.TryAdd(currentRoom, new HashSet<string>());
+
                             Console.WriteLine($"Client joined room {currentRoom}");
+                        }
+                        else if (message.StartsWith("Email:"))
+                        {
+                            if (currentRoom != null && _roomUsers.ContainsKey(currentRoom))
+                            {
+                                var email = message.Replace("Email:", "").Trim();
+                                _roomUsers[currentRoom].Add(email);
+
+                                // Broadcast updated user list
+                                await BroadcastUserList(currentRoom);
+                            }
                         }
                         else
                         {
                             // Broadcast message to all clients in the same room
                             if (currentRoom != null && _rooms.ContainsKey(currentRoom))
                             {
-                                // Send message to all clients except the sender
                                 foreach (var client in _rooms[currentRoom])
                                 {
                                     if (client != webSocket && client.State == WebSocketState.Open)
@@ -123,6 +137,33 @@ namespace CollaborativeCodeEditor
                 if (currentRoom != null && _rooms.ContainsKey(currentRoom))
                 {
                     _rooms[currentRoom].TryTake(out webSocket);
+                }
+            }
+        }
+
+        private async Task BroadcastUserList(string room)
+        {
+            if (_roomUsers.ContainsKey(room))
+            {
+                var userList = string.Join(",", _roomUsers[room]);
+                foreach (var client in _rooms[room])
+                {
+                    if (client.State == WebSocketState.Open)
+                    {
+                        try
+                        {
+                            await client.SendAsync(
+                                new ArraySegment<byte>(Encoding.UTF8.GetBytes($"USERS:{userList}")),
+                                WebSocketMessageType.Text,
+                                true,
+                                CancellationToken.None
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error broadcasting user list: {ex.Message}");
+                        }
+                    }
                 }
             }
         }

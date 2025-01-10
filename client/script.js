@@ -5,6 +5,8 @@ const roomIdInput = document.getElementById("roomId");
 const languageDropdown = document.getElementById("languageDropdown");
 const stdinBox = document.getElementById("stdinBox");
 const outputBox = document.getElementById("outputBox");
+const userListDiv = document.getElementById("usersList");
+const userEmail = document.getElementById("lblUserEmail").innerText;
 
 let editor;
 let ws;
@@ -69,22 +71,33 @@ function connectToServer(roomId) {
 
     ws.onopen = () => {
         ws.send(`JOIN:${roomId}`);
+        ws.send(`Email:${userEmail}`);
     };
 
     ws.onmessage = (event) => {
         const message = event.data;
 
-        // Prevent recursion when updating editor content
-        suppressEditorChanges = true;
+        if (message.startsWith("USERS:")) {
+            const usersList = message.replace("USERS:", "").split(",");
+            userListDiv.innerHTML = ""; // Clear existing list
+            usersList.forEach((user) => {
+                const userItem = document.createElement("li");
+                userItem.textContent = user.trim();
+                userListDiv.appendChild(userItem);
+            });
+        } else {
+            suppressEditorChanges = true;
 
-        // Update the editor content if different from the current content
-        if (editor && message && editor.getValue() !== message) {
-            editor.setValue(message);
+            // Update editor content if it differs
+            if (editor && message && editor.getValue() !== message) {
+                editor.setValue(message);
+            }
+
+            suppressEditorChanges = false;
         }
-
-        suppressEditorChanges = false;
     };
 }
+
 
 // Run Code Button Functionality
 function runCode() {
